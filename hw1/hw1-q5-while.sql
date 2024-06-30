@@ -2,7 +2,7 @@
 DROP TABLE IF EXISTS q5_extended_paths;
 CREATE TABLE q5_extended_paths(src, dest, length, path)
 AS
-    SELECT qu.src,qu.dest,qu.length+qe.length as length,path || qe.dest as path
+    SELECT qu.src,qe.dest,qu.length+qe.length as length,path || qe.dest as path
     FROM q5_paths_to_update as qu inner join q5_edges as qe
     on qu.dest=qe.src
     WHERE qu.src<>qe.dest 
@@ -10,18 +10,10 @@ AS
 
 CREATE TABLE q5_new_paths(src, dest, length, path)
 AS
-   SELECT src,dest,length,path
-   from q5_extended_paths
-   where not exists(
-    select 1
-    from q5_paths p
-    where p.src=src and p.dest=dest
-   )
-   or exists(
-    select 1
-    FROM q5_paths p
-    WHERE p.src=src and p.dest=dest and p.length>length
-   );
+   SELECT qe.src,qe.dest,qe.length,qe.path
+   from q5_extended_paths qe
+   inner join q5_paths as q
+    on q.src=qe.src and(q.dest<>qe.dest or q.length>qe.length);
 
 CREATE TABLE q5_better_paths(src, dest, length, path)
 AS 
