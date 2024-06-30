@@ -9,7 +9,8 @@ mkdir your_output 2>/dev/null
 rm -rf diffs 2>/dev/null
 mkdir diffs 2>/dev/null
 
-psql -E -d baseball < "$HW_FILE"
+alter role postgres
+psql  -U postgres -E -d baseball < "$HW_FILE"
 
 pass=true
 
