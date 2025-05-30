@@ -328,7 +328,7 @@ class LeafNode extends BPlusNode {
    * meta.getAllocator().
    */
   public static LeafNode fromBytes(BPlusTreeMetadata metadata, int pageNum) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    throw new UnsupportedOperationException("TODO(hw2): implement test.");
   }
 
   // Builtins //////////////////////////////////////////////////////////////////
