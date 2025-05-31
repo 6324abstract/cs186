@@ -328,7 +328,22 @@ class LeafNode extends BPlusNode {
    * meta.getAllocator().
    */
   public static LeafNode fromBytes(BPlusTreeMetadata metadata, int pageNum) {
-    throw new UnsupportedOperationException("TODO(hw2): implement test.");
+    Page page=metadata.getAllocator().fetchPage(pageNum);
+    ByteBuffer buf=page.getByteBuffer();
+    assert(buf.get()==(byte) 0);
+    List<DataBox> keys=new ArrayList<>();
+    List<RecordId> rids=new ArrayList<>();
+    Optional<Integer>siblingPageNum = buf.getInt(1)==-1 ? Optional.empty() : Optional.of(buf.getInt(1));
+    int pairCount = buf.getInt(5); // Read the number of (key, rid) pairs
+    for (int i = 0; i < pairCount; ++i) {
+         keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
+         rids.add(RecordId.fromBytes(buf));
+    }
+
+    return  new LeafNode(metadata, pageNum,
+                         keys, rids,
+                        siblingPageNum
+                        );
   }
 
   // Builtins //////////////////////////////////////////////////////////////////
