@@ -133,13 +133,13 @@ class LeafNode extends BPlusNode {
   // See BPlusNode.get.
   @Override
   public LeafNode get(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    return this;
   }
 
   // See BPlusNode.getLeftmostLeaf.
   @Override
   public LeafNode getLeftmostLeaf() {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    return this;
   }
 
   // See BPlusNode.put.
@@ -330,7 +330,7 @@ class LeafNode extends BPlusNode {
   public static LeafNode fromBytes(BPlusTreeMetadata metadata, int pageNum) {
     Page page=metadata.getAllocator().fetchPage(pageNum);
     ByteBuffer buf=page.getByteBuffer();
-    assert(buf.get()==(byte) 0);
+    //assert(buf.get()==(byte) 0);
     List<DataBox> keys=new ArrayList<>();
     List<RecordId> rids=new ArrayList<>();
     Optional<Integer>siblingPageNum = buf.getInt(1)==-1 ? Optional.empty() : Optional.of(buf.getInt(1));

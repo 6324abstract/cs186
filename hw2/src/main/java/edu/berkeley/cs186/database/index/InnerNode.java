@@ -75,7 +75,13 @@ class InnerNode extends BPlusNode {
   // See BPlusNode.getLeftmostLeaf.
   @Override
   public LeafNode getLeftmostLeaf() {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    int childIndex = 0;
+    for (; childIndex < children.size(); ++childIndex) {
+      if (numLessThan(getChild(childIndex), children) == 0) {
+        break;
+      }
+    }
+    return getChild(childIndex).getLeftmostLeaf();
   }
 
   // See BPlusNode.put.
