@@ -146,7 +146,45 @@ class LeafNode extends BPlusNode {
   @Override
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    if (keys.size()+1<=2 * metadata.getOrder()) // no overflow
+    {
+      for (int i=0;i<keys.size();i++){
+        if (keys.get(i).equals(key)) {
+          throw new BPlusTreeException(
+              String.format("Key %s already exists in leaf node %s.", key, this));
+        } else if (keys.get(i).compareTo(key) > 0) {
+          // Insert the new key and record id at the correct position.
+          keys.add(i, key);
+          rids.add(i, rid);
+          sync();
+          return Optional.empty();
+        }
+      }
+    }
+    else {
+      //create a new leaf node
+      int key_index= InnerNode.numLessThan(key, keys);
+      ArrayList<DataBox> new_keys= new ArrayList<>();
+      ArrayList<RecordId> new_rids= new ArrayList<>();
+      for (int i=key_index+1;i<keys.size();i++){
+        if (keys.get(i).equals(key)) {
+          throw new BPlusTreeException(
+              String.format("Key %s already exists in leaf node %s.", key, this));
+        }
+        else {
+          new_keys.add(keys.remove(i));
+          new_rids.add(rids.remove(i));
+
+        }
+      }
+      LeafNode newLeaf= new LeafNode(metadata,new_keys, new_rids, rightSibling);
+      // update the current leaf node
+      rightSibling= Optional.of(newLeaf.getPage().getPageNum());
+      sync();
+      return Optional.of(new Pair<>(new_keys.get(0), newLeaf.getPage().getPageNum()));
+      // update inner node
+    }
+    return Optional.empty();
   }
 
   // See BPlusNode.remove.
