@@ -69,19 +69,14 @@ class InnerNode extends BPlusNode {
   // See BPlusNode.get.
   @Override
   public LeafNode get(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+      int key_index=numLessThanEqual(key, keys);
+      return getChild(key_index).get(key);
   }
 
   // See BPlusNode.getLeftmostLeaf.
   @Override
   public LeafNode getLeftmostLeaf() {
-    int childIndex = 0;
-    for (; childIndex < children.size(); ++childIndex) {
-      if (numLessThan(getChild(childIndex), children) == 0) {
-        break;
-      }
-    }
-    return getChild(childIndex).getLeftmostLeaf();
+    return getChild(0).getLeftmostLeaf();
   }
 
   // See BPlusNode.put.
