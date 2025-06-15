@@ -81,7 +81,19 @@ public class TestLeafNode {
       LeafNode leaf = getEmptyLeaf(meta, Optional.empty());
       assertEquals(leaf, leaf.getLeftmostLeaf());
     }
+    @Test
+    public void testSimpleNoOverflowPuts() throws BPlusTreeException, IOException {
+        int d = 5;
+        BPlusTreeMetadata meta = getBPlusTreeMetadata(Type.intType(), d);
+        LeafNode leaf = getEmptyLeaf(meta, Optional.empty());
 
+        for (int i = 0; i < 2 * d; ++i) {
+            DataBox key = new IntDataBox(i);
+            RecordId rid = new RecordId(i, (short) i);
+            assertEquals(Optional.empty(), leaf.put(key, rid));
+        }
+        assertEquals(2 * d, leaf.getKeys().size());
+    }
     @Test
     public void testNoOverflowPuts() throws BPlusTreeException, IOException {
       int d = 5;
@@ -136,6 +148,8 @@ public class TestLeafNode {
       // The duplicate insert should raise an exception.
       leaf.put(new IntDataBox(0), new RecordId(0, (short) 0));
     }
+
+    //TODO: test overflow put
 
     @Test
     public void testSimpleRemoves() throws BPlusTreeException, IOException {
