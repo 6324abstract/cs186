@@ -146,6 +146,13 @@ class LeafNode extends BPlusNode {
   @Override
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
+    if (keys.isEmpty()) {
+      // If the leaf is empty, just add the key and record id.
+      keys.add(key);
+      rids.add(rid);
+      sync();
+      return Optional.empty();
+    }
     if (keys.size()+1<=2 * metadata.getOrder()) // no overflow
     {
       for (int i=0;i<keys.size();i++){
@@ -156,6 +163,12 @@ class LeafNode extends BPlusNode {
           // Insert the new key and record id at the correct position.
           keys.add(i, key);
           rids.add(i, rid);
+          sync();
+          return Optional.empty();
+        }
+        else {
+          keys.add(key);
+          rids.add(rid);
           sync();
           return Optional.empty();
         }
@@ -190,7 +203,13 @@ class LeafNode extends BPlusNode {
   // See BPlusNode.remove.
   @Override
   public void remove(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+    for (int i=0;i<keys.size();i++){
+      if (keys.get(i).equals(key)) {
+        keys.remove(i);
+        rids.remove(i);
+        sync();
+      }
+    }
   }
 
   // Iterators /////////////////////////////////////////////////////////////////
@@ -371,8 +390,9 @@ class LeafNode extends BPlusNode {
     //assert(buf.get()==(byte) 0);
     List<DataBox> keys=new ArrayList<>();
     List<RecordId> rids=new ArrayList<>();
-    Optional<Integer>siblingPageNum = buf.getInt(1)==-1 ? Optional.empty() : Optional.of(buf.getInt(1));
-    int pairCount = buf.getInt(5); // Read the number of (key, rid) pairs
+    assert(buf.get()==(byte) 1); // Check that this is a leaf node
+    Optional<Integer>siblingPageNum = buf.getInt()==-1 ? Optional.empty() : Optional.of(buf.getInt(1));
+    int pairCount = buf.getInt(); // Read the number of (key, rid) pairs
     for (int i = 0; i < pairCount; ++i) {
          keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
          rids.add(RecordId.fromBytes(buf));
