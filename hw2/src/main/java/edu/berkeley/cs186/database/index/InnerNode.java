@@ -83,13 +83,14 @@ class InnerNode extends BPlusNode {
   @Override
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+   int child_index= numLessThanEqual(key,keys);
+   return getChild(child_index).put(key,rid);
   }
 
   // See BPlusNode.remove.
   @Override
   public void remove(DataBox key) {
-    throw new UnsupportedOperationException("TODO(hw2): implement.");
+      getChild(numLessThanEqual(key,keys)).remove(key);
   }
 
   // Helpers ///////////////////////////////////////////////////////////////////
