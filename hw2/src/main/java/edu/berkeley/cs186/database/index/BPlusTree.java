@@ -119,8 +119,25 @@ public class BPlusTree {
     }
 
     /** Read a B+ tree that was previously serialized to filename. */
-    public BPlusTree(String filename) {
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+    public BPlusTree(String filename) throws BPlusTreeException{
+       PageAllocator allocator = new PageAllocator(filename,false);
+       this.headerPage=allocator.fetchPage(0);
+       // extract from bytes
+       byte [] bytes= headerPage.readBytes();
+       int N= bytes.length-8;
+       ByteBuffer buf=ByteBuffer.wrap(bytes);
+       buf.limit(N);
+       ByteBuffer typeBuffers= buf.slice();
+       buf.position(N);
+       buf.limit(bytes.length);
+       int order=buf.getInt();
+       int root_page_number=buf.getInt();
+       this.metadata=new BPlusTreeMetadata(
+               allocator,
+               Type.fromBytes(typeBuffers),
+               order
+       );
+        this.root = BPlusNode.fromBytes(this.metadata,root_page_number);
     }
 
     // Core API ////////////////////////////////////////////////////////////////
