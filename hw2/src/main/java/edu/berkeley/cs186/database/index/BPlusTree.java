@@ -156,7 +156,7 @@ public class BPlusTree {
      */
     public Optional<RecordId> get(DataBox key) {
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+      return root.get(key).getKey(key);
     }
 
     /**
@@ -203,9 +203,9 @@ public class BPlusTree {
      * leaves of the B+ tree. Solutions that materialize all record ids in
      * memory will receive 0 points.
      */
-    public Iterator<RecordId> scanAll() {
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
-      // TODO(hw2): Return a BPlusTreeIterator.
+    public Iterator<RecordId> scanAll() throws NoSuchElementException {
+        return new BPlusTreeIterator(root);
+
     }
 
     /**
@@ -232,10 +232,10 @@ public class BPlusTree {
      * leaves of the B+ tree. Solutions that materialize all record ids in
      * memory will receive 0 points.
      */
-    public Iterator<RecordId> scanGreaterEqual(DataBox key) {
+    public Iterator<RecordId> scanGreaterEqual(DataBox key) throws NoSuchElementException {
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
-      // TODO(hw2): Return a BPlusTreeIterator.
+        BPlusTreeIterator iter = new BPlusTreeIterator(root);
+        return iter.findGraterEqual(key);
     }
 
     /**
@@ -250,7 +250,7 @@ public class BPlusTree {
      */
     public void put(DataBox key, RecordId rid) throws BPlusTreeException {
       typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+      root.put(key, rid);
     }
 
     /**
@@ -266,8 +266,7 @@ public class BPlusTree {
      *   tree.get(key); // Optional.empty()
      */
     public void remove(DataBox key) {
-      typecheck(key);
-      throw new UnsupportedOperationException("TODO(hw2): implement.");
+        root.remove(key);
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
@@ -333,16 +332,44 @@ public class BPlusTree {
 
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
-      // TODO(hw2): Add whatever fields and constructors you want here.
-
+        private LeafNode curNode;
+        private Iterator<RecordId> curIterator;
+        private BPlusTreeIterator(BPlusNode root){
+         this.curNode=root.getLeftmostLeaf();
+         this.curIterator=curNode.scanAll();
+     }
       @Override
       public boolean hasNext() {
-        throw new UnsupportedOperationException("TODO(hw2): implement.");
+        if (curIterator.hasNext()){
+            return true;
+        } else {
+            return curNode.getRightSibling().isPresent();
+        }
       }
 
       @Override
       public RecordId next() {
-        throw new UnsupportedOperationException("TODO(hw2): implement.");
+          if(curIterator.hasNext()){
+              return curIterator.next();
+          } else if (curNode.getRightSibling().isPresent()) {
+              curNode=curNode.getRightSibling().get();
+              curIterator=curNode.scanAll();
+              return curIterator.next();
+          } else {
+              throw new NoSuchElementException("No more elements in BPlusTreeIterator");
+          }
+      }
+      public Iterator<RecordId> findGraterEqual(DataBox key){
+            while (this.hasNext()){
+                for (DataBox k : curNode.getKeys()) {
+                    if (k.compareTo(key) >= 0) { // Found a key greater than or equal to the given key
+                        return curIterator;
+                    }
+                    this.next();
+                }
+            }
+            throw new NoSuchElementException("No keys greater than or equal to " + key + " found in BPlusTreeIterator");
       }
     }
+
 }
