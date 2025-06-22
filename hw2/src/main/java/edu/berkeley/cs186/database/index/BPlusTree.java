@@ -1,11 +1,7 @@
 package edu.berkeley.cs186.database.index;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.databox.DataBox;
@@ -249,8 +245,30 @@ public class BPlusTree {
      *   tree.put(key, rid); // BPlusTreeException :(
      */
     public void put(DataBox key, RecordId rid) throws BPlusTreeException {
-      typecheck(key);
-      root.put(key, rid);
+        typecheck(key);
+        // Recursively put the key and rid into the tree.
+        Optional<Pair<DataBox, Integer>> putValue = root.put(key, rid);
+
+        // If put returns a value, it means the root was split, so we need to create a new root.
+        if (putValue.isPresent()) {
+            DataBox splitKey = putValue.get().getFirst();
+            int rightChildPageNum = putValue.get().getSecond();
+
+            ArrayList<DataBox> newKeys = new ArrayList<>();
+            newKeys.add(splitKey);
+
+            ArrayList<Integer> children = new ArrayList<>();
+            children.add(root.getPage().getPageNum());
+            children.add(rightChildPageNum);
+
+            // Create the new root.
+            this.root = new InnerNode(
+                    metadata,
+                    newKeys,
+                    children
+            );
+        }
+
     }
 
     /**

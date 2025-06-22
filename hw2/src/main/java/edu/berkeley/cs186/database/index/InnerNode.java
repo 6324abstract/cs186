@@ -84,7 +84,19 @@ class InnerNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
    int child_index= numLessThanEqual(key,keys);
-   return getChild(child_index).put(key,rid);
+   // copy the key when overflow occurs
+   Optional<Pair<DataBox,Integer>> overflowResult=getChild(child_index).put(key,rid);
+   if (!overflowResult.isPresent()){
+     return overflowResult;
+   }
+    // overflow occurs, we need to insert the key into this node
+    DataBox overflowKey = overflowResult.get().getFirst();
+    int overflowChildPageNum = overflowResult.get().getSecond();
+    this.keys.add(child_index, overflowKey);
+    this.children.add(child_index + 1, overflowChildPageNum);
+    // update the pointer to the child
+    return Optional.of(new Pair<>(overflowKey, page.getPageNum()));
+    // if the number of keys exceeds the maximum order, we need to split
   }
 
   // See BPlusNode.remove.

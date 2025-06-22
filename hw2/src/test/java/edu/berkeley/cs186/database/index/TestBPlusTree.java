@@ -67,6 +67,8 @@ public class TestBPlusTree {
       tree.put(new IntDataBox(9), new RecordId(9, (short) 9));
       assertEquals("((4 (4 4)) (9 (9 9)))", tree.toSexp());
 
+      //  @yanzhe. li note that the root is now a leaf node
+
       //   (6)
       //  /   \
       // (4) (6 9)
