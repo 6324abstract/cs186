@@ -147,42 +147,33 @@ class LeafNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
     int order=metadata.getOrder();
-    if (keys.isEmpty() || keys.get(0).compareTo(key)>0) {
+    int key_size= keys.size();
+    if (keys.isEmpty()) {
       // If the leaf is empty or less than first, insert at the head
       keys.add(0,key);
       rids.add(0,rid);
       sync();
       return Optional.empty();
     }
-    if (keys.size()+1<=2 * order) // no overflow
-    {
-      for (int i=0;i<keys.size();i++){
-        int key_order=keys.get(i).compareTo(key);
-        if (key_order==0) {
-          throw new BPlusTreeException(
-              String.format("Key %s already exists in leaf node %s.", key, this));
-        } else if (key_order < 0) {
-          // Insert the new key and record id at the correct position.
-          keys.add(i+1, key);
-          rids.add(i+1, rid);
-          sync();
-          return Optional.empty();
-        }
+    if (keys.get(key_size-1).compareTo(key)<0){
+      keys.add(key_size,key);
+      rids.add(key_size,rid);
+      sync();
+      return Optional.empty();
+    }
+    for (int i=0;i<key_size;i++){
+      if (keys.get(i).equals(key)) {
+        throw new BPlusTreeException(
+                String.format("Key %s already exists in leaf node %s.", key, this));
+      }
+      else if (keys.get(i).compareTo(key)>0) {
+        keys.add(i, key);
+        rids.add(i, rid);
+        sync();
       }
     }
-    else {
-      //insert key
-      for (int i=0;i<keys.size();i++){
-        if (keys.get(i).equals(key)) {
-          throw new BPlusTreeException(
-              String.format("Key %s already exists in leaf node %s.", key, this));
-        }
-        else if (keys.get(i).compareTo(key)<0) {
-            keys.add(i, key);
-            rids.add(i, rid);
-            break;
-        }
-      }
+    if (keys.size()>2 * order) // overflow
+     {
       // split the keys and rids into two parts
       ArrayList<DataBox>new_keys= new ArrayList<>(keys.subList(order, keys.size()));
       ArrayList<RecordId>new_rids= new ArrayList<>(rids.subList(order, rids.size()));
