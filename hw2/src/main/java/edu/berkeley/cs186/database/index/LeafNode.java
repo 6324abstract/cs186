@@ -147,10 +147,10 @@ class LeafNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
     int order=metadata.getOrder();
-    if (keys.isEmpty()) {
-      // If the leaf is empty, just add the key and record id.
-      keys.add(key);
-      rids.add(rid);
+    if (keys.isEmpty() || keys.get(0).compareTo(key)>0) {
+      // If the leaf is empty or less than first, insert at the head
+      keys.add(0,key);
+      rids.add(0,rid);
       sync();
       return Optional.empty();
     }
