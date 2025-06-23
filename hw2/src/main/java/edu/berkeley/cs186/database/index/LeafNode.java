@@ -170,6 +170,7 @@ class LeafNode extends BPlusNode {
         keys.add(i, key);
         rids.add(i, rid);
         sync();
+        break;
       }
     }
     if (keys.size()>2 * order) // overflow
