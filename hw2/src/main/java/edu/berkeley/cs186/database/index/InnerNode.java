@@ -90,8 +90,7 @@ class InnerNode extends BPlusNode {
    if (!overflowResult.isPresent()){
      return overflowResult;
    }
-    // overflow occurs, we need to insert the key into this node only from leafnode
-    // todo: determine if the child is leafnode(need copy up)
+    // copy from bottom when overflow occurs at children
     DataBox overflowKey = overflowResult.get().getFirst();
     int overflowChildPageNum = overflowResult.get().getSecond();
     this.keys.add(child_index, overflowKey);
@@ -104,14 +103,16 @@ class InnerNode extends BPlusNode {
       return  Optional.empty();
     }
     else {
-      ArrayList<DataBox>new_keys= new ArrayList<>(keys.subList(order, keys.size()));
-      ArrayList<Integer>new_children= new ArrayList<>(children.subList(order, children.size()));
+      // move up the split key(d+1), slice new from d+2
+      ArrayList<DataBox>new_keys= new ArrayList<>(keys.subList(order+1 ,keys.size()));
+      ArrayList<Integer>new_children= new ArrayList<>(children.subList(order+1, children.size()));
+      DataBox split_key=keys.get(order);
       keys = new ArrayList<>(keys.subList(0, order));
-      children = new ArrayList<>(children.subList(0, order));
-      // create a new node
+      children = new ArrayList<>(children.subList(0, order+1)); // children has one more element than keys
+      // create right inner node
       InnerNode newInner= new InnerNode(metadata,new_keys, new_children);
       sync();
-      return Optional.of(new Pair<>(new_keys.get(0), newInner.getPage().getPageNum()));
+      return Optional.of(new Pair<>(split_key, newInner.getPage().getPageNum()));
     }
   }
 
