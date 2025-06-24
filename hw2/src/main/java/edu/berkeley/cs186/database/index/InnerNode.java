@@ -84,19 +84,35 @@ class InnerNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
    int child_index= numLessThanEqual(key,keys);
-   // copy the key when overflow occurs
+   // check if overflow occurs at childNode recursively
    Optional<Pair<DataBox,Integer>> overflowResult=getChild(child_index).put(key,rid);
+   // return empty with no overflow
    if (!overflowResult.isPresent()){
      return overflowResult;
    }
-    // overflow occurs, we need to insert the key into this node
+    // overflow occurs, we need to insert the key into this node only from leafnode
+    // todo: determine if the child is leafnode(need copy up)
     DataBox overflowKey = overflowResult.get().getFirst();
     int overflowChildPageNum = overflowResult.get().getSecond();
     this.keys.add(child_index, overflowKey);
-    this.children.add(child_index + 1, overflowChildPageNum);
-    // update the pointer to the child
-    return Optional.of(new Pair<>(overflowKey, page.getPageNum()));
-    // if the number of keys exceeds the maximum order, we need to split
+    // update child pointer to insert split one(right to the child index)
+    this.children.add(child_index+1, overflowChildPageNum);
+
+    int order=metadata.getOrder();
+    if (keys.size()<=order*2) { // no overflow at current node
+      sync();
+      return  Optional.empty();
+    }
+    else {
+      ArrayList<DataBox>new_keys= new ArrayList<>(keys.subList(order, keys.size()));
+      ArrayList<Integer>new_children= new ArrayList<>(children.subList(order, children.size()));
+      keys = new ArrayList<>(keys.subList(0, order));
+      children = new ArrayList<>(children.subList(0, order));
+      // create a new node
+      InnerNode newInner= new InnerNode(metadata,new_keys, new_children);
+      sync();
+      return Optional.of(new Pair<>(new_keys.get(0), newInner.getPage().getPageNum()));
+    }
   }
 
   // See BPlusNode.remove.

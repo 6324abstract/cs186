@@ -178,8 +178,8 @@ class LeafNode extends BPlusNode {
       // split the keys and rids into two parts
       ArrayList<DataBox>new_keys= new ArrayList<>(keys.subList(order, keys.size()));
       ArrayList<RecordId>new_rids= new ArrayList<>(rids.subList(order, rids.size()));
-      keys=keys.subList(0, order);
-      rids=rids.subList(0, order);
+       keys = new ArrayList<>(keys.subList(0, order));
+       rids = new ArrayList<>(rids.subList(0, order));
       // update the right sibling
       LeafNode newLeaf= new LeafNode(metadata,new_keys, new_rids, rightSibling);
       rightSibling= Optional.of(newLeaf.getPage().getPageNum());
