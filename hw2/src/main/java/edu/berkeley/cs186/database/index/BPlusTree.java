@@ -1,6 +1,5 @@
 package edu.berkeley.cs186.database.index;
 
-import com.sun.prism.impl.Disposer;
 import edu.berkeley.cs186.database.common.Pair;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.databox.Type;

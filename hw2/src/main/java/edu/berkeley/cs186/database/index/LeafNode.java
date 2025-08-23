@@ -144,15 +144,13 @@ class LeafNode extends BPlusNode {
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
 
-    if (getKey(key).isPresent()) {
+    int idx = Collections.binarySearch(keys, key);
+    if (idx >= 0) {
       throw new BPlusTreeException("Duplicate key not allowed");
     }
+    idx = -(idx + 1); // Convert negative insertion point to positive index
 
-    // Find the position in keys to add this new key (asc order)
-    int idx = 0;
     Optional<Pair<DataBox, Integer>> out = Optional.empty();
-    for ( ; idx < keys.size() && key.compareTo(keys.get(idx)) > 0; idx++)
-      ;
 
     keys.add(idx, key);
     rids.add(idx, rid);
@@ -182,8 +180,11 @@ class LeafNode extends BPlusNode {
   // See BPlusNode.remove.
   @Override
   public void remove(DataBox key) {
-    rids.remove(keys.indexOf(key));
-    keys.remove(key);
+    int index = keys.indexOf(key);
+    if (index != -1) {
+      keys.remove(index);
+      rids.remove(index);
+    }
     sync();
   }
 
