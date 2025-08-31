@@ -262,4 +262,64 @@ public class TestLeafNode {
         assertEquals(leaf, LeafNode.fromBytes(meta, pageNum));
       }
     }
+
+  @Test
+  public void testOverflowSplitBoundaryConditions() throws BPlusTreeException, IOException {
+    int d = 2;
+    BPlusTreeMetadata meta = getBPlusTreeMetadata(Type.intType(), d);
+    LeafNode leaf = getEmptyLeaf(meta, Optional.empty());
+    
+    for (int i = 0; i < 2 * d; ++i) {
+      assertEquals(Optional.empty(), leaf.put(new IntDataBox(i), new RecordId(i, (short) i)));
+    }
+    assertEquals(2 * d, leaf.getKeys().size());
+    
+    Optional<Pair<DataBox, Integer>> result = leaf.put(new IntDataBox(2 * d), new RecordId(2 * d, (short) (2 * d)));
+    assertTrue(result.isPresent());
+    assertEquals(d, leaf.getKeys().size());
+  }
+  
+  @Test
+  public void testSplitWithDuplicateKeys() throws BPlusTreeException, IOException {
+    int d = 2;
+    BPlusTreeMetadata meta = getBPlusTreeMetadata(Type.intType(), d);
+    LeafNode leaf = getEmptyLeaf(meta, Optional.empty());
+    
+    for (int i = 0; i < 2 * d; ++i) {
+      leaf.put(new IntDataBox(i), new RecordId(i, (short) i));
+    }
+    
+    try {
+      leaf.put(new IntDataBox(1), new RecordId(100, (short) 100));
+      assertTrue("Expected BPlusTreeException", false);
+    } catch (BPlusTreeException e) {
+    }
+  }
+  
+  @Test
+  public void testRemoveFromEmptyNode() throws BPlusTreeException, IOException {
+    int d = 5;
+    BPlusTreeMetadata meta = getBPlusTreeMetadata(Type.intType(), d);
+    LeafNode leaf = getEmptyLeaf(meta, Optional.empty());
+    
+    // Remove from empty node should not crash
+    leaf.remove(new IntDataBox(42));
+    assertEquals(0, leaf.getKeys().size());
+  }
+  
+  @Test
+  public void testSingleElementOperations() throws BPlusTreeException, IOException {
+    int d = 5;
+    BPlusTreeMetadata meta = getBPlusTreeMetadata(Type.intType(), d);
+    LeafNode leaf = getEmptyLeaf(meta, Optional.empty());
+    
+    leaf.put(new IntDataBox(42), new RecordId(42, (short) 42));
+    assertEquals(1, leaf.getKeys().size());
+    assertEquals(Optional.of(new RecordId(42, (short) 42)), leaf.getKey(new IntDataBox(42)));
+    
+    // Remove single element
+    leaf.remove(new IntDataBox(42));
+    assertEquals(0, leaf.getKeys().size());
+    assertEquals(Optional.empty(), leaf.getKey(new IntDataBox(42)));
+  }
 }

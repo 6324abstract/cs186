@@ -2,6 +2,7 @@ package edu.berkeley.cs186.database.index;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -146,47 +147,41 @@ class LeafNode extends BPlusNode {
   @Override
   public Optional<Pair<DataBox, Integer>> put(DataBox key, RecordId rid)
       throws BPlusTreeException {
-    int order=metadata.getOrder();
-    int key_size= keys.size();
-    if (keys.isEmpty()) {
-      // If the leaf is empty or less than first, insert at the head
-      keys.add(0,key);
-      rids.add(0,rid);
-      sync();
-      return Optional.empty();
-    }
-    if (keys.get(key_size-1).compareTo(key)<0){
-      keys.add(key_size,key);
-      rids.add(key_size,rid);
-      sync();
-      return Optional.empty();
-    }
-    for (int i=0;i<key_size;i++){
-      if (keys.get(i).equals(key)) {
+    
+    for (DataBox existingKey : keys) {
+      if (existingKey.equals(key)) {
         throw new BPlusTreeException(
                 String.format("Key %s already exists in leaf node %s.", key, this));
       }
-      else if (keys.get(i).compareTo(key)>0) {
-        keys.add(i, key);
-        rids.add(i, rid);
-        sync();
-        break;
-      }
     }
-    if (keys.size()>2 * order) // overflow
-     {
-      // split the keys and rids into two parts
-      ArrayList<DataBox>new_keys= new ArrayList<>(keys.subList(order, keys.size()));
-      ArrayList<RecordId>new_rids= new ArrayList<>(rids.subList(order, rids.size()));
-       keys = new ArrayList<>(keys.subList(0, order));
-       rids = new ArrayList<>(rids.subList(0, order));
-      // update the right sibling
-      LeafNode newLeaf= new LeafNode(metadata,new_keys, new_rids, rightSibling);
-      rightSibling= Optional.of(newLeaf.getPage().getPageNum());
+    
+    int idx = Collections.binarySearch(keys, key);
+    if (idx >= 0) {
+      throw new BPlusTreeException("Duplicate key not allowed");
+    }
+    idx = -(idx + 1);
+    
+    keys.add(idx, key);
+    rids.add(idx, rid);
+    
+    if (keys.size() > 2 * metadata.getOrder()) {
+      int splitIdx = keys.size() / 2;
+      List<DataBox> rightKeys = new ArrayList<>(keys.subList(splitIdx, keys.size()));
+      List<RecordId> rightRids = new ArrayList<>(rids.subList(splitIdx, rids.size()));
+      
+      keys = new ArrayList<>(keys.subList(0, splitIdx));
+      rids = new ArrayList<>(rids.subList(0, splitIdx));
+      
+      LeafNode rightNode = new LeafNode(metadata, rightKeys, rightRids, rightSibling);
+      rightSibling = Optional.of(rightNode.getPage().getPageNum());
+      
       sync();
-      return Optional.of(new Pair<>(new_keys.get(0), newLeaf.getPage().getPageNum()));
+      rightNode.sync();
+      return Optional.of(new Pair<>(rightKeys.get(0), rightNode.getPage().getPageNum()));
+    } else {
+      sync();
+      return Optional.empty();
     }
-    return Optional.empty();
   }
 
   // See BPlusNode.remove.
@@ -380,7 +375,8 @@ class LeafNode extends BPlusNode {
     List<DataBox> keys=new ArrayList<>();
     List<RecordId> rids=new ArrayList<>();
     assert(buf.get()==(byte) 1); // Check that this is a leaf node
-    Optional<Integer>siblingPageNum = buf.getInt()==-1 ? Optional.empty() : Optional.of(buf.getInt(1));
+    int siblingPtr = buf.getInt();
+    Optional<Integer>siblingPageNum = siblingPtr == -1 ? Optional.empty() : Optional.of(siblingPtr);
     int pairCount = buf.getInt(); // Read the number of (key, rid) pairs
     for (int i = 0; i < pairCount; ++i) {
          keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));
