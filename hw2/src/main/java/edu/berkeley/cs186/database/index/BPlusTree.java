@@ -115,25 +115,17 @@ public class BPlusTree {
     }
 
     /** Read a B+ tree that was previously serialized to filename. */
-    public BPlusTree(String filename) throws BPlusTreeException{
-       PageAllocator allocator = new PageAllocator(filename,false);
-       this.headerPage=allocator.fetchPage(0);
-       // extract from bytes
-       byte [] bytes= headerPage.readBytes();
-       int N= bytes.length-8;
-       ByteBuffer buf=ByteBuffer.wrap(bytes);
-       buf.limit(N);
-       ByteBuffer typeBuffers= buf.slice();
-       buf.position(N);
-       buf.limit(bytes.length);
-       int order=buf.getInt();
-       int root_page_number=buf.getInt();
-       this.metadata=new BPlusTreeMetadata(
-               allocator,
-               Type.fromBytes(typeBuffers),
-               order
-       );
-        this.root = BPlusNode.fromBytes(this.metadata,root_page_number);
+    public BPlusTree(String filename) {
+      PageAllocator allocator = new PageAllocator(filename, false);
+      Page headerPage = allocator.fetchPage(0);
+      ByteBuffer headerBuf = headerPage.getByteBuffer();
+      Type keySchema = Type.fromBytes(headerBuf);
+      int order = headerBuf.getInt();
+      int rootPage = headerBuf.getInt();
+      metadata = new BPlusTreeMetadata(allocator, keySchema, order);
+
+      // Construct the root.
+      root = BPlusNode.fromBytes(metadata, rootPage);
     }
 
     // Core API ////////////////////////////////////////////////////////////////
@@ -228,10 +220,14 @@ public class BPlusTree {
      * leaves of the B+ tree. Solutions that materialize all record ids in
      * memory will receive 0 points.
      */
-    public Iterator<RecordId> scanGreaterEqual(DataBox key) throws NoSuchElementException {
+    public Iterator<RecordId> scanGreaterEqual(DataBox key) {
       typecheck(key);
-        BPlusTreeIterator iter = new BPlusTreeIterator(root);
+      BPlusTreeIterator iter = new BPlusTreeIterator(root);
+      try {
         return iter.findGraterEqual(key);
+      } catch (NoSuchElementException e) {
+        return new ArrayList<RecordId>().iterator();
+      }
     }
 
     /**
@@ -356,6 +352,11 @@ public class BPlusTree {
          this.curNode=root.getLeftmostLeaf();
          this.curIterator=curNode.scanAll();
      }
+     
+        private BPlusTreeIterator(LeafNode startNode, Iterator<RecordId> startIterator){
+         this.curNode=startNode;
+         this.curIterator=startIterator;
+     }
       @Override
       public boolean hasNext() {
         if (curIterator.hasNext()){
@@ -378,14 +379,21 @@ public class BPlusTree {
           }
       }
       public Iterator<RecordId> findGraterEqual(DataBox key){
-            while (this.hasNext()){
-                for (DataBox k : curNode.getKeys()) {
-                    if (k.compareTo(key) >= 0) { // Found a key greater than or equal to the given key
-                        return curIterator;
-                    }
-                    this.next();
+            this.curNode = root.getLeftmostLeaf();
+            this.curIterator = curNode.scanGreaterEqual(key);
+            
+            if (curIterator.hasNext()) {
+                return new BPlusTreeIterator(curNode, curIterator);
+            }
+            
+            while (curNode.getRightSibling().isPresent()) {
+                curNode = curNode.getRightSibling().get();
+                curIterator = curNode.scanGreaterEqual(key);
+                if (curIterator.hasNext()) {
+                    return new BPlusTreeIterator(curNode, curIterator);
                 }
             }
+            
             throw new NoSuchElementException("No keys greater than or equal to " + key + " found in BPlusTreeIterator");
       }
     }

@@ -1,5 +1,7 @@
 package edu.berkeley.cs186.database.index;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -378,4 +380,46 @@ public class TestBPlusTree {
       assertEquals(5, InnerNode.maxOrder(pageSizeInBytes, keySchema));
       assertEquals(4, BPlusTree.maxOrder(pageSizeInBytes, keySchema));
     }
+
+  @Test
+  public void testEmptyTreeOperations() throws BPlusTreeException, IOException {
+    BPlusTree tree = getBPlusTree(Type.intType(), 2);
+    
+    assertEquals(Optional.empty(), tree.get(new IntDataBox(42)));
+    
+    tree.remove(new IntDataBox(42));
+    
+    assertFalse(tree.scanAll().hasNext());
+    assertFalse(tree.scanGreaterEqual(new IntDataBox(0)).hasNext());
+  }
+  
+  @Test
+  public void testSingleElementTree() throws BPlusTreeException, IOException {
+    BPlusTree tree = getBPlusTree(Type.intType(), 2);
+    
+    tree.put(new IntDataBox(42), new RecordId(42, (short) 42));
+    assertEquals(Optional.of(new RecordId(42, (short) 42)), tree.get(new IntDataBox(42)));
+    
+    Iterator<RecordId> iter = tree.scanAll();
+    assertTrue(iter.hasNext());
+    assertEquals(new RecordId(42, (short) 42), iter.next());
+    assertFalse(iter.hasNext());
+    
+    // Remove single element
+    tree.remove(new IntDataBox(42));
+    assertEquals(Optional.empty(), tree.get(new IntDataBox(42)));
+  }
+  
+  @Test
+  public void testBoundaryValueInsertions() throws BPlusTreeException, IOException {
+    BPlusTree tree = getBPlusTree(Type.intType(), 2);
+    
+    tree.put(new IntDataBox(Integer.MIN_VALUE), new RecordId(0, (short) 0));
+    tree.put(new IntDataBox(Integer.MAX_VALUE), new RecordId(1, (short) 1));
+    tree.put(new IntDataBox(0), new RecordId(2, (short) 2));
+    
+    assertEquals(Optional.of(new RecordId(0, (short) 0)), tree.get(new IntDataBox(Integer.MIN_VALUE)));
+    assertEquals(Optional.of(new RecordId(1, (short) 1)), tree.get(new IntDataBox(Integer.MAX_VALUE)));
+    assertEquals(Optional.of(new RecordId(2, (short) 2)), tree.get(new IntDataBox(0)));
+  }
 }
